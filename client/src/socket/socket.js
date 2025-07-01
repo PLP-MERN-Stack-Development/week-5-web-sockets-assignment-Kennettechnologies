@@ -35,9 +35,14 @@ export const useSocket = () => {
     socket.disconnect();
   };
 
-  // Send a message
-  const sendMessage = (message) => {
-    socket.emit('send_message', { message });
+  // Join a chat room
+  const joinRoom = (room) => {
+    socket.emit('join_room', room);
+  };
+
+  // Send a message (room-aware)
+  const sendMessage = (messageData) => {
+    socket.emit('send_message', messageData);
   };
 
   // Send a private message
@@ -48,6 +53,21 @@ export const useSocket = () => {
   // Set typing status
   const setTyping = (isTyping) => {
     socket.emit('typing', isTyping);
+  };
+
+  // Mark a message as read
+  const readMessage = (messageId) => {
+    socket.emit('read_message', messageId);
+  };
+
+  // Send a file message (fileUrl, room, etc.)
+  const sendFileMessage = (messageData) => {
+    socket.emit('send_message', messageData);
+  };
+
+  // React to a message
+  const reactMessage = (messageId, reaction, username) => {
+    socket.emit('react_message', { messageId, reaction, username });
   };
 
   // Socket event listeners
@@ -70,6 +90,15 @@ export const useSocket = () => {
     const onPrivateMessage = (message) => {
       setLastMessage(message);
       setMessages((prev) => [...prev, message]);
+    };
+
+    // Read receipt event
+    const onMessageRead = ({ messageId, readBy }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, readBy } : msg
+        )
+      );
     };
 
     // User events
@@ -108,6 +137,15 @@ export const useSocket = () => {
       setTypingUsers(users);
     };
 
+    // Reacted message event
+    const onMessageReacted = ({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, reactions } : msg
+        )
+      );
+    };
+
     // Register event listeners
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -117,6 +155,8 @@ export const useSocket = () => {
     socket.on('user_joined', onUserJoined);
     socket.on('user_left', onUserLeft);
     socket.on('typing_users', onTypingUsers);
+    socket.on('message_read', onMessageRead);
+    socket.on('message_reacted', onMessageReacted);
 
     // Clean up event listeners
     return () => {
@@ -128,6 +168,8 @@ export const useSocket = () => {
       socket.off('user_joined', onUserJoined);
       socket.off('user_left', onUserLeft);
       socket.off('typing_users', onTypingUsers);
+      socket.off('message_read', onMessageRead);
+      socket.off('message_reacted', onMessageReacted);
     };
   }, []);
 
@@ -140,9 +182,13 @@ export const useSocket = () => {
     typingUsers,
     connect,
     disconnect,
+    joinRoom,
     sendMessage,
     sendPrivateMessage,
     setTyping,
+    readMessage,
+    sendFileMessage,
+    reactMessage,
   };
 };
 
